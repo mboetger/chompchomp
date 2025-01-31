@@ -16,7 +16,7 @@ To install ChompChomp, clone the repository and install the dependencies:
 ```bash
 git clone https://github.com/mboetger/chompchomp.git
 cd chompchomp
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 You will need the [Chrome Web Driver](https://developer.chrome.com/docs/chromedriver/get-started)
@@ -25,10 +25,10 @@ Usage
 
 Start a worker:
 ```bash
-./scripts/start
+./backend/scripts/start
 ```
 
 Manage the Celery backend:
 ```bash
-./scripts/manage
+./backend/scripts/manage
 ```
