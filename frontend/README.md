@@ -1,6 +1,6 @@
-# React Application
+# Chomp Chomp Frontend
 
-This is a React application created to demonstrate the integration with a FastAPI backend.
+This is a React application created to demonstrate the integration with the Chomp Chomp backend.
 
 ## Getting Started
 
