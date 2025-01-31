@@ -28,6 +28,11 @@ Start a worker:
 ./backend/scripts/start
 ```
 
+Start the API
+```bash
+./backend/scripts/api
+```
+
 Manage the Celery backend:
 ```bash
 ./backend/scripts/manage

@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
-from celery import Celery, group
+from celery import Celery, group, subtask
 from extractnet import Extractor
 
 from textblob import TextBlob
@@ -16,10 +16,12 @@ from sumy.utils import get_stop_words
 
 from urllib.parse import urlparse
 
+
 import datetime
 import hashlib
 import json
 import os
+
 import random
 import redis
 import webtech
@@ -79,6 +81,10 @@ def get_options(): # Get Chrome options for headless browsing
     options.add_experimental_option("useAutomationExtension", False) 
     user_agent = random.choice(user_agents)
     options.add_argument(f'user-agent={user_agent}')
+
+    proxy_url = os.getenv('PROXY_URL') # IP:PORT or HOST:PORT
+    if proxy_url:
+        options.add_argument(f'--proxy-server={proxy_url}')
     return options
 
 def setup_driver():
@@ -92,6 +98,7 @@ def setup_driver():
 def scrape(url):
     results = {}
     driver = setup_driver()
+    print(url)
     try:        
         driver.get(url)
         page_source = driver.page_source
@@ -111,8 +118,6 @@ def scrape(url):
 @app.task(default_retry_delay=4, max_retries=2, soft_time_limit=10, time_limit=30)
 def get_links(target_xpath):
     target, xpath = target_xpath
-    print(target)
-    print(xpath)
     urls = set()
     driver = setup_driver()
     try:    
@@ -244,3 +249,49 @@ def summarize(extracted_data):
             pipe.execute()
         results[url] = True
     return results        
+
+@app.task
+def workflow():
+    process_url = (
+        scrape.s() | 
+        group(
+            extract.s() | 
+            group(
+                keywords.s(), 
+                sentiment.s(),  
+                summarize.s(),                       
+            ),
+            scan.s(),
+            #ask_whois.s(),
+        )
+    )
+    keys = r.keys('generator:*')
+    for key in keys:
+        url = r.hget(key, 'url').decode()
+        xpath = r.hget(key, 'xpath').decode()
+        (get_links.s((url, xpath)) | dmap.s(process_url)).delay().forget()
+
+def clone_signature(sig, args=(), kwargs=(), **opts):
+    if sig.subtask_type and sig.subtask_type != "chain":
+        raise NotImplementedError(
+            "Cloning only supported for Tasks and chains, not %s" % sig.subtask_type
+        )
+    clone = sig.clone()
+    if hasattr(clone, "tasks"):
+        t = clone.tasks[0]
+    else:
+        t = clone
+    args, kwargs, opts = t._merge(args=args, kwargs=kwargs, options=opts)
+    t.update(args=args, kwargs=kwargs, options=opts)
+    return clone
+
+@app.task()
+def dmap(it, cb):
+    callback = subtask(cb)
+    print(it)
+    for arg in it:
+        print(arg)
+        
+    grp = group(clone_signature(callback, [arg, ]) for arg in it)
+    return grp()
+

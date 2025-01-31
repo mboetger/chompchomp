@@ -1,5 +1,7 @@
 import React from 'react';
 import './App.css';
+import PostUrlComponent from './components/PostUrlComponent';
+import WorkflowComponent from './components/WorkflowComponent';
 
 function App() {
     return (
@@ -10,6 +12,8 @@ function App() {
             </header>
             <main>
                 <p>Gather your data.</p>
+                <PostUrlComponent />
+                <WorkflowComponent />
             </main>
             <footer>
                 <p>Footer content goes here.</p>

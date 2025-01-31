@@ -6,7 +6,8 @@ import redis
 
 from celery import group
 from fastapi import FastAPI
-from tasks import ask_whois, extract, get_links, keywords, scrape, scan, sentiment, summarize
+from pydantic import BaseModel
+from tasks import workflow, get_links, scrape, extract, keywords, sentiment, summarize, scan
 from urllib.parse import unquote
 
 
@@ -56,7 +57,16 @@ async def read_item(item_id: str):
         data[bucket] = r.hgetall(key)
     return data
 
-process_url = (
+class Item(BaseModel):
+    url: str    
+
+@app.post("/url")
+async def create_item(item: Item):       
+    if validate_url(item.url):
+        return {"message": "Invalid URL"}    
+    url = unquote(item.url)    
+    
+    process_url = (
         scrape.s() | 
         group(
             extract.s() | 
@@ -70,11 +80,6 @@ process_url = (
         )
     )
 
-@app.post("/url/{item_id}")
-async def create_item(item_id: str):       
-    if validate_url(item_id):
-        return {"message": "Invalid URL"}    
-    url = unquote(item_id)    
     process_url.delay(url).forget()
     return {"message": "Item created"}
 
@@ -128,15 +133,8 @@ async def draft_generator(item_id: str, xpath: str):
     return {"message": "Draft generator created"}
 
 @app.post("/workflow")
-async def workflow():      
-    keys = r.keys('generator:*')
-    targets = {}
-    for key in keys:        
-        targets[r.hget(key, b'url').decode('utf-8')] = r.hget(key, b'xpath').decode('utf-8')
-        
-    print(targets)
-
-    links = group(get_links.s(item) for item in targets.items()).delay().get()
-    return links
+async def start_workflow():      
+    workflow.s().delay().forget()
+    return {"message": "Workflow started"}
 
 
