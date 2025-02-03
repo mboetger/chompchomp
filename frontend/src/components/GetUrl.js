@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
 
-const PostUrlComponent = () => {
+const GetUrl = () => {
     const [itemId, setItemId] = useState('');
     const [response, setResponse] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {            
-            const process_url = {url: encodeURIComponent(itemId)};
-            const wtf = JSON.stringify(process_url);
-            console.log(wtf)
-            const res = await fetch(`url`, {            
-                method: 'POST',
+            const url = encodeURI(itemId);        
+            const res = await fetch(`/url/${url}`, {            
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json;'
                   },
-                body: JSON.stringify(process_url),
             });
             const data = await res.json();
             setResponse(data);
@@ -26,7 +23,7 @@ const PostUrlComponent = () => {
 
     return (
         <div>
-            <h1>Post URL</h1>
+            <h1>Get URL</h1>
             <form onSubmit={handleSubmit}>
                 <label>
                     Item ID:
@@ -43,4 +40,4 @@ const PostUrlComponent = () => {
     );
 };
 
-export default PostUrlComponent;
+export default GetUrl;

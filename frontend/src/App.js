@@ -1,23 +1,26 @@
 import React from 'react';
 import './App.css';
-import PostUrlComponent from './components/PostUrlComponent';
-import WorkflowComponent from './components/WorkflowComponent';
+import {
+    BrowserRouter as Router,  
+    Route, Routes,    
+  } from "react-router-dom";
+import GetUrl from './components/GetUrl';
+import PostUrl from './components/PostUrl';
+import Workflow from './components/Workflow';
+import ChompNav from './components/Nav';
+
 
 function App() {
     return (
         <div className="App">
-            <header className="App-header">
-                <h1>Chomp Chomp</h1>
-                <a href="http://localhost:5555">Workers</a>
-            </header>
-            <main>
-                <p>Gather your data.</p>
-                <PostUrlComponent />
-                <WorkflowComponent />
-            </main>
-            <footer>
-                <p>Footer content goes here.</p>
-            </footer>
+            <ChompNav />  
+            <Router>                                                       
+                <Routes>
+                    <Route path="/urls" element={<GetUrl />} />                                                    
+                    <Route path="/workflow" element={<Workflow />} /> 
+                    <Route path="/" element={<PostUrl />} />
+                </Routes>                                    
+            </Router>                            
         </div>
     );
 }

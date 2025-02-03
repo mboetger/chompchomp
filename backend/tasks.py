@@ -98,7 +98,6 @@ def setup_driver():
 def scrape(url):
     results = {}
     driver = setup_driver()
-    print(url)
     try:        
         driver.get(url)
         page_source = driver.page_source
@@ -288,10 +287,6 @@ def clone_signature(sig, args=(), kwargs=(), **opts):
 @app.task()
 def dmap(it, cb):
     callback = subtask(cb)
-    print(it)
-    for arg in it:
-        print(arg)
-        
     grp = group(clone_signature(callback, [arg, ]) for arg in it)
     return grp()
 

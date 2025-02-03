@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const WorkflowComponent = () => {    
+const Workflow = () => {    
     const [response, setResponse] = useState(null);
 
     const handleSubmit = async (e) => {
@@ -30,4 +30,4 @@ const WorkflowComponent = () => {
     );
 };
 
-export default WorkflowComponent;
+export default Workflow;

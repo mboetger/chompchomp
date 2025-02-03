@@ -48,6 +48,9 @@ regex = re.compile(
 def validate_url(url):
     return re.match(regex, url) is not None
 
+class Item(BaseModel):
+    url: str    
+
 @app.get("/url/{item_id}")
 async def read_item(item_id: str):
     url = unquote(item_id)
@@ -57,8 +60,14 @@ async def read_item(item_id: str):
         data[bucket] = r.hgetall(key)
     return data
 
-class Item(BaseModel):
-    url: str    
+@app.get("/urls")
+async def read_items():
+    url = unquote(item_id)
+    data = {}
+    for bucket in buckets:
+        key = get_key(bucket, url)        
+        data[bucket] = r.hgetall(key)
+    return data
 
 @app.post("/url")
 async def create_item(item: Item):       
@@ -81,7 +90,8 @@ async def create_item(item: Item):
     )
 
     process_url.delay(url).forget()
-    return {"message": "Item created"}
+    return {"message": "Item created",
+            "id": get_key('url', url)}
 
 @app.get("/generator/{item_id}")   
 async def generator(item_id: str):
