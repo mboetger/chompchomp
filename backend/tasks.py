@@ -16,17 +16,13 @@ from sumy.utils import get_stop_words
 
 from urllib.parse import urlparse
 
-
-import datetime
-import hashlib
-import json
 import os
-
 import random
-import redis
 import webtech
 import whois
 import yake
+
+from data import get_generators, save_url, save_extraction, save_sentiment, save_keywords, save_scan, save_whois, save_summary
 
 SUMMARY_LANGUAGE = "english"
 SUMMARY_SENTENCES_COUNT = 5
@@ -53,14 +49,6 @@ backend_url = os.getenv('CELERY_BACKEND_URL', 'redis://localhost:6379/0')
 # Initialize Celery app with broker and backend URLs
 app = Celery('tasks', broker=broker_url, backend=backend_url)
 app.conf.broker_transport_options = {'visibility_timeout': 3600}  # 1 hour.
-
-# Set up Redis connection details from environment variables, with defaults
-redis_host = os.getenv('REDIS_HOST', 'localhost')
-redis_port = os.getenv('REDIS_PORT', 6379)
-redis_db = os.getenv('REDIS_DB', 1)
-
-# Connect to Redis for more persistent saves
-r = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
 
 wt = webtech.WebTech(options={'json': True})  
 
@@ -103,12 +91,7 @@ def scrape(url):
         page_source = driver.page_source
         if page_source:
             results[url] = page_source
-            key = get_key('url', url)
-            with r.pipeline() as pipe:  # Start a pipeline (transaction)
-                pipe.hset(key, 'url', url)
-                today = datetime.datetime.today()
-                pipe.hset(key, 'date', int(today.timestamp()))
-                pipe.execute()
+            save_url(url)            
     finally:
         driver.close()
     return results
@@ -146,37 +129,16 @@ def extract(scraped):
         if not data.get('content'):
             continue
     
-        key = get_key('extract', url)
-        with r.pipeline() as pipe:  # Start a pipeline (transaction)
-            pipe.hset(key, 'rawAuthor', data.get('rawAuthor', ''))            
-            pipe.hset(key, 'rawDate', data.get('rawDate', ''))
-            pipe.hset(key, 'title', data.get('title', ''))
-            pipe.hset(key, 'content', data.get('content', ''))            
-            pipe.execute()
-        
+        save_extraction(url, data)        
         results[url] = data.get('content', '')
     return results
-
-def get_key(prefix, url):
-    return prefix + ":" + hashlib.md5(url.encode()).hexdigest()
-
-def remove_http(url):
-    if url.startswith('http://'):
-        return url[7:]
-    if url.startswith('https://'):
-        return url[8:]
-    return url
 
 @app.task()
 def sentiment(extracted_data):
     results = {}
     for url, content in extracted_data.items():                
-        sentiment = TextBlob(content).sentiment                        
-        key = get_key('sentiment', url)
-        with r.pipeline() as pipe:            
-            pipe.hset(key, 'polarity', str(sentiment.polarity))
-            pipe.hset(key, 'subjectivity', str(sentiment.subjectivity))
-            pipe.execute()
+        sentiment = TextBlob(content).sentiment    
+        save_sentiment(url, sentiment)        
 
         results[url] = True
     return results
@@ -186,12 +148,7 @@ def keywords(extracted_data):
     results = {}    
     for url, content in extracted_data.items():        
         keywords = kw_model.extract_keywords(content)                       
-        
-        key = get_key('keywords', url) 
-        with r.pipeline() as pipe:  # Start a pipeline (transaction)
-            for k,v in keywords:                
-                pipe.hset(key, k, v)
-            pipe.execute()               
+        save_keywords(url, keywords)            
         results[url] = True    
     return results
 
@@ -199,24 +156,9 @@ def keywords(extracted_data):
 def scan(data):
     results = {}
     for url, _data in data.items():
-        report = wt.start_from_url(url)        
-        key = get_key('tech', url) 
+        report = wt.start_from_url(url)                
         tech = report['tech']
-        if tech:
-            with r.pipeline() as pipe:  # Start a pipeline (transaction)            
-                for item in tech:                               
-                    version = item['version']
-                    if version is None:
-                        version = ''
-                    pipe.hset(key, item['name'], version)                  
-                    pipe.execute()        
-        key = get_key('headers', url) 
-        headers = report['headers']
-        if headers:           
-            with r.pipeline() as pipe:  # Start a pipeline (transaction)            
-                for item in headers:                                  
-                    pipe.hset(key, item['name'], item['value'])                     
-                    pipe.execute()      
+        save_scan(url, report)  
         results[url] = True
     return results
 
@@ -224,51 +166,23 @@ def scan(data):
 def ask_whois(data):
     results = {}    
     for url, _data in data.items():
-        domain = urlparse(url).netloc
-        key = get_key('whois', domain)
+        domain = urlparse(url).netloc    
         whois_info = whois.whois(domain)
-        print(whois_info)        
-        with r.pipeline() as pipe:  # Start a pipeline (transaction)            
-            pipe.hset(key, 'report', json.dumps(whois_info))
-            pipe.execute()
+        save_whois(domain, whois_info)
         results[url] = True
     return results
 
 @app.task
 def summarize(extracted_data):    
     results = {}    
-    for url, content in extracted_data.items():    
-        key = get_key('url', url) 
+    for url, content in extracted_data.items():            
         summary = ''
         parser = PlaintextParser.from_string(content, Tokenizer(SUMMARY_LANGUAGE))
         for sentence in summarizer(parser.document, SUMMARY_SENTENCES_COUNT):            
             summary += str(sentence) + ' '        
-        with r.pipeline() as pipe:  # Start a pipeline (transaction)                  
-            pipe.hset(key, 'summary', summary)                
-            pipe.execute()
+        save_summary(url, summary)
         results[url] = True
     return results        
-
-@app.task
-def workflow():
-    process_url = (
-        scrape.s() | 
-        group(
-            extract.s() | 
-            group(
-                keywords.s(), 
-                sentiment.s(),  
-                summarize.s(),                       
-            ),
-            scan.s(),
-            #ask_whois.s(),
-        )
-    )
-    keys = r.keys('generator:*')
-    for key in keys:
-        url = r.hget(key, 'url').decode()
-        xpath = r.hget(key, 'xpath').decode()
-        (get_links.s((url, xpath)) | dmap.s(process_url)).delay().forget()
 
 def clone_signature(sig, args=(), kwargs=(), **opts):
     if sig.subtask_type and sig.subtask_type != "chain":
@@ -289,4 +203,28 @@ def dmap(it, cb):
     callback = subtask(cb)
     grp = group(clone_signature(callback, [arg, ]) for arg in it)
     return grp()
+
+@app.task
+def workflow():
+    process_url = (
+        scrape.s() | 
+        group(
+            extract.s() | 
+            group(
+                keywords.s(), 
+                sentiment.s(),  
+                summarize.s(),                       
+            ),
+            scan.s(),
+            #ask_whois.s(),
+        )
+    )
+    generators = get_generators()    
+    for _key, data in generators.items():
+        print(data)
+        url = data.get(b'url').decode()
+        xpath = data.get(b'xpath').decode()
+        (get_links.s((url, xpath)) | dmap.s(process_url)).delay().forget()
+
+
 
