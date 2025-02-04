@@ -9,14 +9,12 @@ app = FastAPI()
 
 @app.get("/url/{item_id}")
 async def read_item(item_id: str):
-    url = unquote(item_id)
-    if (validate_url_id(url)):        
-        return get_url_data(url)    
+    id = unquote(item_id)    
+    return get_url_data(id)    
 
 @app.post("/url")
 async def create_item(item: Url):       
-    url = validate_url_item(item)      
-    print(url)    
+    url = validate_url_item(item)          
     (scrape.s() | 
     group(
         extract.s() | 
@@ -41,18 +39,18 @@ async def generator_list():
 
 @app.post("/generator")
 async def create_generator(generator: Generator):   
-    url, xpath = validate_generator(generator)
-    return save_generator(url, xpath)
+    validate_generator(generator)
+    return save_generator(generator.url, generator.xpath)
 
 @app.post("/test/generator")
 async def test_generator(generator: Generator):   
-    url, xpath = validate_generator(generator)
-    return get_links((url, xpath))    
+    generator = validate_generator(generator)
+    return get_links((generator.url, generator.xpath))    
 
 @app.post("/draft/generator")
 async def draft_generator(generator: Generator):   
-    url, xpath = validate_generator(generator)
-    return save_draft_generator(url, xpath)
+    generator = validate_generator(generator)
+    return save_draft_generator(generator.url, generator.xpath)
 
 @app.post("/workflow")
 async def start_workflow():      
