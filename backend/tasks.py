@@ -14,15 +14,16 @@ from sumy.nlp.tokenizers import Tokenizer
 from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 
+import requests
 import os
 import random
 import webtech
 import whois
 import yake
 
-from data import get_generators, save_url, save_extraction, save_sentiment, save_keywords, save_scan, save_whois, save_summary
+from data import validate_url, get_url_by_url, get_aggregators, save_url, save_extraction, save_sentiment, save_keywords, save_scan, save_whois, save_summary
 
 SUMMARY_LANGUAGE = "english"
 SUMMARY_SENTENCES_COUNT = 5
@@ -156,8 +157,7 @@ def keywords(extracted_data):
 def scan(data):
     results = {}
     for url, _data in data.items():
-        report = wt.start_from_url(url)                
-        tech = report['tech']
+        report = wt.start_from_url(url)                        
         save_scan(url, report)  
         results[url] = True
     return results
@@ -219,12 +219,49 @@ def workflow():
             #ask_whois.s(),
         )
     )
-    generators = get_generators()    
-    for _key, data in generators.items():
-        print(data)
-        url = data.get(b'url').decode()
-        xpath = data.get(b'xpath').decode()
+    aggregators = get_aggregators()    
+    for _key, data in aggregators.items():
+        url = data.get('url')
+        xpath = data.get('xpath')
         (get_links.s((url, xpath)) | dmap.s(process_url)).delay().forget()
 
+archive_url = "https://web.archive.org/cdx/search/cdx?output=json&url="
+web_archive = "https://web.archive.org/web/"
+
+@app.task(rate_limit='4/m', queue='slow')
+def get_slow_links(target_xpath):
+    print(target_xpath)
+    links = get_links(target_xpath)
+    new_links = []
+    for link in links:
+        if validate_url(link) and not get_url_by_url(link):
+            new_links.append(link)
+    print(new_links)
+    return new_links
+
+@app.task
+def wayback():
+    process_url = (
+        scrape.s() | 
+        group(
+            extract.s() | 
+            group(
+                keywords.s(), 
+                sentiment.s(),  
+                summarize.s(),                       
+            ),
+            scan.s(),
+            #ask_whois.s(),
+        )
+    )
+    aggregators = get_aggregators()    
+    for _key, data in aggregators.items():
+        url = data.get('url')
+        xpath = data.get('xpath')
+        response = requests.get(f"{archive_url}{url}")
+        snapshots = reversed(response.json()[1:])
+        for snapshot in snapshots: 
+            archived_url = web_archive + snapshot[1] + "/" + quote_plus(snapshot[2])
+            (get_slow_links.s((archived_url, xpath)) | dmap.s(process_url)).delay().forget()
 
 

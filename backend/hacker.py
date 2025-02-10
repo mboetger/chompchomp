@@ -73,6 +73,8 @@ if __name__ == "__main__":
         first_key = next(iter(targets))
         first_value = targets[first_key]
         main({first_key: first_value})        
+    if '-w' in sys.argv or '--wayback' in sys.argv:
+        print('Wayback Machine')
     else:
         main(targets)
 

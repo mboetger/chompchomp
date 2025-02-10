@@ -1,8 +1,8 @@
 from celery import group
 from fastapi import FastAPI
 
-from data import Url, Generator, get_key, get_generator, get_generators, save_generator, save_draft_generator, validate_generator, validate_url_item, validate_url_id, get_url_data
-from tasks import workflow, get_links, scrape, extract, keywords, sentiment, summarize, scan
+from data import Url, Aggregator, get_stats, get_urls, get_key, get_aggregator, get_aggregators, save_aggregator, save_draft_aggregator, validate_aggregator, validate_url_item, validate_url_id, get_url_data
+from tasks import wayback, workflow, get_links, scrape, extract, keywords, sentiment, summarize, scan
 from urllib.parse import unquote
 
 app = FastAPI()
@@ -29,32 +29,45 @@ async def create_item(item: Url):
     return {"message": "Item created",
             "id": get_key('url', url)}
 
-@app.get("/generator/{item_id}")   
-async def generator(item_id: str):    
-    return get_generator(unquote(item_id) )
+@app.get("/urls")
+async def url_list():
+    return get_urls()
 
-@app.get("/generators")
-async def generator_list():
-    return get_generators()    
+@app.get("/stats")
+async def stats():
+    return get_stats()
 
-@app.post("/generator")
-async def create_generator(generator: Generator):   
-    validate_generator(generator)
-    return save_generator(generator.url, generator.xpath)
+@app.get("/aggregator/{item_id}")   
+async def aggregator(item_id: str):    
+    return get_aggregator(unquote(item_id) )
 
-@app.post("/test/generator")
-async def test_generator(generator: Generator):   
-    generator = validate_generator(generator)
-    return get_links((generator.url, generator.xpath))    
+@app.get("/aggregators")
+async def aggregator_list():
+    return get_aggregators()    
 
-@app.post("/draft/generator")
-async def draft_generator(generator: Generator):   
-    generator = validate_generator(generator)
-    return save_draft_generator(generator.url, generator.xpath)
+@app.post("/aggregator")
+async def create_aggregator(aggregator: Aggregator):   
+    validate_aggregator(aggregator)
+    return save_aggregator(unquote(aggregator.url), unquote(aggregator.xpath))
+
+@app.post("/test/aggregator")
+async def test_aggregator(aggregator: Aggregator):   
+    validate_aggregator(aggregator)
+    return get_links((unquote(aggregator.url), unquote(aggregator.xpath)))    
+
+@app.post("/draft/aggregator")
+async def draft_aggregator(aggregator: Aggregator):   
+    validate_aggregator(aggregator)
+    return save_draft_aggregator(unquote(aggregator.url), unquote(aggregator.xpath))
 
 @app.post("/workflow")
 async def start_workflow():      
     workflow.s().delay().forget()
     return {"message": "Workflow started"}
+
+@app.post("/wayback")
+async def start_wayback():      
+    wayback.s().delay().forget()
+    return {"message": "Wayback started"}
 
 

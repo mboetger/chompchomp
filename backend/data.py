@@ -4,8 +4,9 @@ import hashlib
 import re
 from urllib.parse import unquote
 from pydantic import BaseModel
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 import numpy
+from bson.objectid import ObjectId
 
 buckets = ['url', 'extract', 'sentiment', 'keywords', 'scan', 'tech', 'headers']
 
@@ -57,8 +58,6 @@ def sanitize(data):
         for k, v in data.items():
             if isinstance(v, dict):
                 sanitize(v)
-            elif isinstance(v, str):
-                data[k] = v.strip()
             elif isinstance(v, numpy.float64):
                 data[k] = str(v)
             elif isinstance(v, numpy.float32):
@@ -66,8 +65,6 @@ def sanitize(data):
     elif isinstance(data, list): 
         for d in data:
             sanitize(d)
-    elif isinstance(data, str):
-        data = data.strip()
     elif isinstance(data, numpy.float64):
         data = str(data)
     elif isinstance(data, numpy.float32):
@@ -124,13 +121,11 @@ def save_whois(domain, whois_info):
 
 
 def save_summary(url, summary):
-    summary = sanitize(summary)
     db.urls.update_one(
         {'url': url}, 
         {'$set': {'summary': summary}},
         upsert=True
     )
-
 
 class Url(BaseModel):
     url: str
@@ -142,31 +137,83 @@ def validate_url_item(item: Url):
         return {"message": "Invalid URL"}
     return url
 
-def get_url_data(id: str):    
-    return db.urls.find_one({'_id': id})    
+def get_url_by_url(url: str):
+    return db.urls.find_one({'url': url})
 
-class Generator(BaseModel):
+def get_url_data(id: str):    
+    results = list(db.urls.aggregate([
+        {"$match": {
+            "_id": ObjectId(id),
+        }},
+        {'$sort': {'date': DESCENDING}},
+        {'$project': {
+            "_id": {"$toString": "$_id"},
+            "url": 1,
+            "date": 1,
+            "extract.title": 1,
+            "extract.headline": 1,
+            "extract.content": 1,
+            "extract.author": 1,
+            "extract.date": 1,
+            "keywords": 1,
+            "sentiment": 1,
+            "tech": 1,
+            "summary": 1,
+
+        }},
+        {'$limit': 1}
+    ]))
+    return results[0] if results else None
+
+def get_urls():
+    return list(db.urls.aggregate([
+        {"$match": {
+            "extract": { "$exists": True }
+        }},
+        {'$sort': {'date': DESCENDING}},
+        {'$project': {
+            "_id": {"$toString": "$_id"},
+            "url": 1,
+            "date": 1,
+            "extract.title": 1,
+            "extract.headline": 1,
+            "summary": 1,
+
+        }},
+        {'$limit': 50}
+    ]))
+
+def get_stats():
+    results = {}
+    urls = {}
+    urls['count'] = db.urls.count_documents({'extract': { '$exists': True }})
+    results['urls'] = urls
+    aggregators = {}
+    aggregators['active_count'] = db.aggregators.count_documents({'status': 'active'})
+    aggregators['draft_count'] = db.aggregators.count_documents({'status': 'draft'})
+    results['aggregators'] = aggregators
+    return results
+
+class Aggregator(BaseModel):
     url: str
     xpath: str
 
-def validate_generator(generator: Generator):    
-    generator.url = unquote(generator.url)
-    if validate_url(generator.url):
+def validate_aggregator(aggregator: Aggregator):    
+    aggregator.url = unquote(aggregator.url)
+    if validate_url(aggregator.url):
         return {"message": "Invalid URL"}
-    generator.xpath = unquote(generator.xpath)    
-    return generator
 
-def get_generator(id):
-    return db.generators.find_one({'_id': id})
+def get_aggregator(id):
+    return db.aggregators.find_one({'_id': id})
 
-def get_generators():
+def get_aggregators():
     results = {}
-    for doc in db.generators.find({'status': 'active'}):
+    for doc in db.aggregators.find({'status': 'active'}):
         results[doc['_id']] = doc
     return results
 
-def save_draft_generator(url, xpath):
-    gen = db.generators.update_one(
+def save_draft_aggregator(url, xpath):
+    gen = db.aggregators.update_one(
         {'url': url},
         {'$set': {'url': url, 'xpath': xpath, 'status': 'draft'}},
         upsert=True
@@ -174,10 +221,10 @@ def save_draft_generator(url, xpath):
     return {'_id': gen.upserted_id}
 
 
-def save_generator(url, xpath):
-    gen = db.generators.update_one(
+def save_aggregator(url, xpath):
+    gen = db.aggregators.update_one(
         {'url': url},
         {'$set': {'url': url, 'xpath': xpath, 'status': 'active'}},
         upsert=True
     )
-    return {'Message': 'Generator saved'}
+    return {'Message': 'aggregator saved'}

@@ -4,11 +4,12 @@ import {
     BrowserRouter as Router,  
     Route, Routes,    
   } from "react-router-dom";
+import Home from './components/Home';
 import GetUrl from './components/GetUrl';
-import PostUrl from './components/PostUrl';
-import Workflow from './components/Workflow';
+import Workflows from './components/Workflows';
 import ChompNav from './components/Nav';
-import PostGenerator from './components/PostGenerator';
+import Aggregators from './components/Aggregators';
+import Url from './components/Url';
 
 
 function App() {
@@ -17,10 +18,11 @@ function App() {
             <ChompNav />  
             <Router>                                                       
                 <Routes>
+                    <Route path="/" element={<Home />} />
                     <Route path="/urls" element={<GetUrl />} />                                                    
-                    <Route path="/workflow" element={<Workflow />} /> 
-                    <Route path="/" element={<PostUrl />} />
-                    <Route path='/generators' element={<PostGenerator />} />
+                    <Route path="/workflows" element={<Workflows />} />                     
+                    <Route path='/aggregators' element={<Aggregators />} />                    
+                    <Route path="/url/:id" element={<Url />} />
                 </Routes>                                    
             </Router>                            
         </div>
