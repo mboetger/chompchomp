@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+
+celery -A schedule beat --loglevel=info

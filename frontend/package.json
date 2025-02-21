@@ -12,6 +12,7 @@
     "react-dom": "",
     "react-router-dom": "^7.1.5",
     "react-scripts": "*",
+    "recharts": "^2.15.1",
     "sass": "^1.84.0"
   },
   "devDependencies": {

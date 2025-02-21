@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  base-image:
+    build:
+      context: ./backend
+      dockerfile: ./docker/Dockerfile.base # Path to the Dockerfile
+    image: chompchomp-base
+  api:
+    build:
+      context: ./backend
+      dockerfile: ./docker/Dockerfile.api
+    container_name: api
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=chompchomp
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BACKEND_URL=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: ./docker/Dockerfile.scheduler
+    container_name: scheduler
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BACKEND_URL=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: ./docker/Dockerfile.worker
+    container_name: worker
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=chompchomp
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BACKEND_URL=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+
+  slow:
+    build:
+      context: ./backend
+      dockerfile: ./docker/Dockerfile slow
+    container_name: slow
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=chompchomp
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BACKEND_URL=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+
+
+  redis:
+    image: redis:6.2
+    container_name: redis
+
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    ports:
+      - "27017:27017"

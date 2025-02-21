@@ -23,7 +23,7 @@ Task Flow:
     3. Execute the group of chained tasks in parallel and immediately forget the results.
 """
 from celery import Celery, group
-from tasks import scrape, extract, get_links, keywords, sentiment, scan, ask_whois, summarize
+from backend.tasks import scrape, extract, get_links, keywords, sentiment, scan, ask_whois, summarize
 import os
 import sys
 
@@ -74,6 +74,8 @@ if __name__ == "__main__":
         first_value = targets[first_key]
         main({first_key: first_value})        
     if '-w' in sys.argv or '--wayback' in sys.argv:
+        first_key = next(iter(targets))
+        first_value = targets[first_key]
         print('Wayback Machine')
     else:
         main(targets)

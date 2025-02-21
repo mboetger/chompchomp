@@ -39,3 +39,4 @@ build/
 *.sublime-workspace
 *.idea/
 .vscode/
+celerybeat-schedule

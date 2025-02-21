@@ -183,10 +183,163 @@ def get_urls():
         {'$limit': 50}
     ]))
 
+def get_urls_by_date():
+    return list()
+
+def get_url_counts():
+    return list(db.urls.aggregate([  			
+        {
+            "$project": {
+                "yearMonthDay": { "$dateToString": { "format": "%Y-%m-%d", "date": "$date" } },
+            }
+        },
+        {
+            "$group": {
+                "_id": "$yearMonthDay",
+                "count": {
+                    "$count": {}
+                }
+            }
+        },
+        {
+            "$sort": {
+                "_id": -1
+            }
+        },
+        {'$limit': 100}
+    ]))
+
+def get_url_counts_by_date():
+    return list(db.urls.aggregate([
+        {
+            "$match": {
+                "extract.date": {
+                    "$not": {
+                        "$size": 0
+                    }
+                }
+            }
+        },
+        {
+            "$addFields": {
+                "dConfidence": {
+                    "$toDecimal": "$extract.dateConfidence"
+                }
+            }
+        },
+        {
+            "$match": {
+                "dConfidence": {
+                    "$gte": 0.04
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$extract.date",
+                "count": {
+                    "$count": {}
+                }
+            }
+        },
+        {
+            "$match": {
+                "_id": {
+                    "$lte": datetime.datetime.utcnow()
+                }
+            }
+        },
+        {
+            "$match": {
+               "count": {
+                    "$gt": 3
+                }
+            }
+        },
+        {
+            "$sort": {
+                "_id": -1
+            }
+        }
+    ]))
+
+def get_urls_with_date():
+    return list(db.urls.aggregate([{
+        "$group": { 
+        "_id": { "hasValue": { "$exists": True } },
+        "count": { "$sum": 1 }
+    }
+  }]))
+
+def get_urls_with_keyword(query):
+    return list(db.urls.aggregate([
+        {
+            "$match": {
+                "keywords.0": {
+                    "$exists": True
+                },
+                "keywords": {
+                    "$elemMatch": {
+                        "0": {
+                            "$regex": query,
+                            "$options": "i"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "$project": {
+                "_id": {"$toString": "$_id"},
+                "url": 1,
+                "date": 1,
+                "extract.title": 1,
+                "extract.headline": 1,
+                "summary": 1,
+            }
+        },
+        {'$limit': 50}
+    ]))
+
+
 def get_stats():
     results = {}
     urls = {}
     urls['count'] = db.urls.count_documents({'extract': { '$exists': True }})
+    urls['with_date'] = list(db.urls.aggregate([{
+        '$match': {
+            "extract.date": {
+                '$not': {
+                '$size': 0
+                }
+            }
+        }
+    },
+    {
+        '$addFields':      
+        {
+            'dConfidence': {
+            '$toDecimal': "$extract.dateConfidence"
+            }
+        }
+    },
+    {
+        '$match':     
+        {
+            'dConfidence': {
+            '$gte': 0.04
+            }
+        }
+    },
+    {
+        '$group': {
+                '_id': None,     
+        'count': {
+            '$count': {}
+        }
+        }
+    }
+    ]))[0]['count']    
     results['urls'] = urls
     aggregators = {}
     aggregators['active_count'] = db.aggregators.count_documents({'status': 'active'})

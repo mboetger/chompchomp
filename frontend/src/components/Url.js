@@ -22,8 +22,8 @@ const Url = () => {
         <Container>
             <Stack gap={3}>
                 <h1><a href={url.url}>{url.extract?.title || url.extract?.headline}</a></h1>
-                <h2>By {url.extract?.author}</h2>
-                <h6>Article Date: {url.extract?.date}</h6>
+                <h2>By {url.extract?.author || "Unknown"}</h2>
+                <h6>Article Date: {url.extract?.date || "None"}</h6>
                 <h6>Scanned On: {url.date}</h6>
                 <h6></h6>
                 <Tabs

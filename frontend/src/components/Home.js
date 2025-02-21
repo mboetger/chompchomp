@@ -1,21 +1,22 @@
 import React from 'react';
-import Container from 'react-bootstrap/Container';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import LatestUrls from './LatestUrls';
-import LatestStats from './LatestStats';
+import Stack from 'react-bootstrap/Stack';
+import Histogram from './Histogram';
+import Urls from './Urls';
+import Breadcrumb from 'react-bootstrap/Breadcrumb';
 
 const Home = () => {
     return (
-        <Container fluid="md">     
-            <Row>
-                <Col><LatestStats /></Col>
-            </Row>      
-            <Row>
-                
-                <Col><h4>Latest Scans</h4><LatestUrls /></Col>                
-            </Row>
-        </Container>
+        <Stack>
+            <Breadcrumb>                
+                <Breadcrumb.Item href="https://getbootstrap.com/docs/4.0/components/breadcrumb/">
+                    Dataset
+                </Breadcrumb.Item>
+                <Breadcrumb.Item active>Tech</Breadcrumb.Item>
+            </Breadcrumb>
+            <Histogram />
+            <br />
+            <Urls />
+        </Stack>        
     );
 };
 
