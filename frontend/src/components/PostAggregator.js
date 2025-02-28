@@ -12,7 +12,7 @@ const PostAggregator = () => {
                 url: encodeURIComponent(url),
                 xpath: encodeURIComponent(xpath)});     
                 
-            const res = await fetch(`aggregator`, {            
+            const res = await fetch(`/api/aggregator`, {            
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;'

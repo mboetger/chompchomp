@@ -19,8 +19,8 @@ const Urls = () => {
     };
 
     const fetchUrls = (query) => {
-        const url = query === '' ? `/urls` : `/urls?query=${encodeURI(query)}`;
-        fetch(url)
+        const url = query === '' ? `urls` : `urls?query=${encodeURI(query)}`;
+        fetch(`/api/${url}`)
             .then(response => response.json())
             .then(data => setUrls(data))
             .catch(error => console.error('Error fetching URLs:', error));
@@ -36,18 +36,19 @@ const Urls = () => {
             />
             <Form.Text id="searchHelpBlock" muted>
                 Search your dataset.
-            </Form.Text>
+            </Form.Text> 
             <Accordion defaultActiveKey="0" flush>
                 {urls.map((url, index) => (
                     <Accordion.Item eventKey={index} key={index}>
                         <Accordion.Header><h5>{url.extract?.title || url.extract?.headline}</h5></Accordion.Header>
                         <Accordion.Body>
-                            <p>{url.summary || url.extract?.headline}</p>
+                            <p class="lead">{url.summary || url.extract?.headline}</p>
                             <Link to={`/url/${url._id}`}>View details</Link>
                         </Accordion.Body>
                     </Accordion.Item>                
                 ))}
-            </Accordion>
+            </Accordion>            
+        
         </Stack>
     );
 };

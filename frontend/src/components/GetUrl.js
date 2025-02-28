@@ -8,7 +8,7 @@ const GetUrl = () => {
         e.preventDefault();
         try {            
             const url = encodeURI(itemId);        
-            const res = await fetch(`/url/${url}`, {            
+            const res = await fetch(`/api/url/${url}`, {            
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json;'

@@ -8,7 +8,7 @@ const PostUrl = () => {
         e.preventDefault();
         try {            
             const body = JSON.stringify({url: encodeURIComponent(itemId)});         
-            const res = await fetch(`url`, {            
+            const res = await fetch(`/api/url`, {            
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;'

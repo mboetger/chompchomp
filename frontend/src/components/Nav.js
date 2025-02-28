@@ -14,7 +14,7 @@ function ChompNav() {
             <Nav.Link href="/urls">URL</Nav.Link>
             <Nav.Link href="/aggregators">Aggregators</Nav.Link>
             <Nav.Link href="/workflows">Workflows</Nav.Link>
-            <Nav.Link href="http://localhost:5555">Workers</Nav.Link>            
+            <Nav.Link href="/admin/">Workers</Nav.Link>            
           </Nav>
         </Navbar.Collapse>
       </Container>      

@@ -6,7 +6,7 @@ const Workflow = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {                        
-            const res = await fetch(`workflow`, {            
+            const res = await fetch(`/api/workflow`, {            
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;'

@@ -197,7 +197,7 @@ def get_url_counts():
             "$group": {
                 "_id": "$yearMonthDay",
                 "count": {
-                    "$count": {}
+                    "$sum": 1
                 }
             }
         },
@@ -238,7 +238,7 @@ def get_url_counts_by_date():
             "$group": {
                 "_id": "$extract.date",
                 "count": {
-                    "$count": {}
+                    "$sum": 1
                 }
             }
         },
@@ -335,7 +335,7 @@ def get_stats():
         '$group': {
                 '_id': None,     
         'count': {
-            '$count': {}
+            '$sum': 1
         }
         }
     }

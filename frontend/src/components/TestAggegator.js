@@ -12,7 +12,7 @@ const TestAggegator = () => {
                 url: encodeURIComponent(url),
                 xpath: encodeURIComponent(xpath)});     
                 
-            const res = await fetch(`/test/aggregator`, {            
+            const res = await fetch(`/api/test/aggregator`, {            
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;'

@@ -1,0 +1,6 @@
+__pycache__
+docker
+.gitignore
+celerybeat-schedule
+celerybeat.pid
+README.md

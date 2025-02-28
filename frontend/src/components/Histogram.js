@@ -19,14 +19,14 @@ const Histogram = () => {
     }, [sortBy]);
 
     const fetchStats = () => {
-        fetch('/stats')
+        fetch('/api/stats')
             .then(response => response.json())
             .then(data => setStats(data))
             .catch(error => console.error('Error fetching stats:', error));
     };
 
     const fetchUrls = (sortValue) => {
-        fetch(`/histogram?sort_by=${sortValue}`)
+        fetch(`/api/histogram?sort_by=${sortValue}`)
             .then(response => response.json())
             .then(data => setSortedUrls(data))
             .catch(error => console.error('Error fetching URLs:', error));
@@ -40,7 +40,7 @@ const Histogram = () => {
         setSortBy(sortValue);        
     }
 
-    const removeOutliers = (data) => {
+    const sanatize = (data) => {
         if (!data || data.length < 4) return data;
       
         const sortedData = [...data].sort((a, b) => a.count - b.count);
@@ -50,14 +50,17 @@ const Histogram = () => {
         const lowerBound = q1 - 1.5 * iqr;
         const upperBound = q3 + 1.5 * iqr;
       
-        return data.filter(item => item.count >= lowerBound && item.count <= upperBound);
+        return data.filter(item => item.count >= lowerBound && item.count <= upperBound).map(item => ({
+            "_id": item._id.split('T')[0],
+            "count": item.count,
+        }));
       }
 
     return (
         <Stack>
             
             <ResponsiveContainer width="100%" height={100}>
-                <AreaChart data={removeOutliers(urls)}>
+                <AreaChart data={sanatize(urls)}>
                     <Area dataKey="count" onClick={handleOnClick}/>
                     <Tooltip />
                     <XAxis dataKey="_id" hide={true} />                

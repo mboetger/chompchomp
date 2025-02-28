@@ -6,7 +6,7 @@ const Wayback = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {                        
-            const res = await fetch(`wayback`, {            
+            const res = await fetch(`/api/wayback`, {            
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;'

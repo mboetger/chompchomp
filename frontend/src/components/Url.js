@@ -12,7 +12,7 @@ const Url = () => {
 
     useEffect(() => {
         // Fetch the latest URLs from an API endpoint
-        fetch(`/url/${encodeURI(idRef.current)}`)
+        fetch(`/api/url/${encodeURI(idRef.current)}`)
             .then(response => response.json())
             .then(data => setUrl(data))
             .catch(error => console.error('Error fetching URLs:', error));
@@ -24,8 +24,7 @@ const Url = () => {
                 <h1><a href={url.url}>{url.extract?.title || url.extract?.headline}</a></h1>
                 <h2>By {url.extract?.author || "Unknown"}</h2>
                 <h6>Article Date: {url.extract?.date || "None"}</h6>
-                <h6>Scanned On: {url.date}</h6>
-                <h6></h6>
+                <h6>Scanned On: {url.date}</h6>   
                 <Tabs
                     defaultActiveKey="summary"
                     id="justify-tab-example"
@@ -34,12 +33,12 @@ const Url = () => {
                     >
                     {url?.summary ? (
                         <Tab eventKey="summary" title="Summary">
-                            <p>{url.summary}</p>
+                            <p class="lead">{url.summary}</p>
                         </Tab>
                     ) : null}
                     {url?.extract?.content ? (
                         <Tab eventKey="content" title="Content">
-                            <p>{url.extract?.content}</p>
+                            <p class="lead">{url.extract?.content}</p>
                         </Tab>
                     ) : null}                        
                     {url?.tech ? (

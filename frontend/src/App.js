@@ -1,5 +1,5 @@
 import React from 'react';
-import './App.css';
+import './App.scss';
 import {
     BrowserRouter as Router,  
     Route, Routes,    
@@ -11,9 +11,6 @@ import ChompNav from './components/Nav';
 import Aggregators from './components/Aggregators';
 import Url from './components/Url';
 import Container from 'react-bootstrap/Container';
-
-
-
 
 function App() {
     return (
