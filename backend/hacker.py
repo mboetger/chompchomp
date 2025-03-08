@@ -23,7 +23,7 @@ Task Flow:
     3. Execute the group of chained tasks in parallel and immediately forget the results.
 """
 from celery import Celery, group
-from backend.tasks import scrape, extract, get_links, keywords, sentiment, scan, ask_whois, summarize
+from tasks import scrape, extract, get_links, keywords, sentiment, scan, ask_whois, summarize
 import os
 import sys
 

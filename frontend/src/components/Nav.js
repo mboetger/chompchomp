@@ -9,11 +9,7 @@ function ChompNav() {
         <Navbar.Brand href="/">Chomp Chomp</Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto">
-            <Nav.Link href="/">Home</Nav.Link>
-            <Nav.Link href="/urls">URL</Nav.Link>
-            <Nav.Link href="/aggregators">Aggregators</Nav.Link>
-            <Nav.Link href="/workflows">Workflows</Nav.Link>
+          <Nav className="ms-auto">     
             <Nav.Link href="/admin/">Workers</Nav.Link>            
           </Nav>
         </Navbar.Collapse>

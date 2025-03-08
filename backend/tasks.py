@@ -93,6 +93,7 @@ def scrape(url):
             save_url(url)            
     finally:
         driver.close()
+    del driver
     return results
 
 # Define a Celery task to get links from a webpage using a specified XPath
@@ -109,6 +110,7 @@ def get_links(target_xpath):
             urls.add(url)
     finally:
         driver.close()
+    del driver
     return list(urls)
 
 def date_to_string(date):

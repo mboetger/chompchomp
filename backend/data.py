@@ -1,5 +1,6 @@
+from enum import Enum
 import os
-import datetime
+from datetime import datetime, timedelta
 import hashlib
 import re
 from urllib.parse import unquote
@@ -50,7 +51,7 @@ def get_key(prefix, url):
 
 def save_url(url: str):
     db.urls.update_one({'url': url}, 
-                        {'$set': {'date': datetime.datetime.today()}}, 
+                        {'$set': {'date': datetime.today()}}, 
                         upsert=True)
 
 def sanitize(data):
@@ -130,6 +131,9 @@ def save_summary(url, summary):
 class Url(BaseModel):
     url: str
 
+class OrderBy(str, Enum):    
+    published = "date_published"
+    scanned = "date_scanned"
 
 def validate_url_item(item: Url):
     url = unquote(item.url)
@@ -165,26 +169,117 @@ def get_url_data(id: str):
     ]))
     return results[0] if results else None
 
-def get_urls():
-    return list(db.urls.aggregate([
-        {"$match": {
-            "extract": { "$exists": True }
-        }},
-        {'$sort': {'date': DESCENDING}},
-        {'$project': {
-            "_id": {"$toString": "$_id"},
-            "url": 1,
-            "date": 1,
-            "extract.title": 1,
-            "extract.headline": 1,
-            "summary": 1,
-
-        }},
+def get_url_list():
+    return [
+        {
+            '$project': {
+                "_id": {"$toString": "$_id"},
+                "url": 1,
+                "date": 1,
+                "extract.title": 1,
+                "extract.headline": 1,
+                "summary": 1,
+            }
+        },
         {'$limit': 50}
-    ]))
+    ]
 
-def get_urls_by_date():
-    return list()
+def get_urls(date:str =None, query:str =None, sort_by: OrderBy = OrderBy.scanned):
+    pipeline = []
+    
+    if date:
+        if sort_by == OrderBy.scanned:
+            begin = datetime.strptime(date, "%Y-%m-%d")
+            end = begin + timedelta(days=1)
+            pipeline.append({
+                "$match": {
+                    "date": {
+                        "$gte": begin,
+                        "$lt": end
+                    }
+                }
+            })
+        else:
+            pipeline.append({
+                "$match": {
+                    "extract.date": {
+                        "$eq": datetime.strptime(date, "%Y-%m-%d")
+                    }
+                }
+            })
+    
+    if query:
+        pipeline.append({
+            "$match": {
+                "keywords.0": {
+                    "$exists": True
+                },
+                "keywords": {
+                    "$elemMatch": {
+                        "0": {
+                            "$regex": query,
+                            "$options": "i"
+                        }
+                    }
+                }
+            }
+        })
+    
+    if sort_by == OrderBy.published:
+        pipeline += get_sort_by_published()
+    else:
+        pipeline += get_sort_by_scanned()
+    
+    pipeline += get_url_list()
+    
+    return list(db.urls.aggregate(pipeline))
+
+def get_sort_by_scanned():
+    return [
+        {
+            "$match": {
+                "extract": { "$exists": True }
+            }
+        },
+        {
+            '$sort': {
+                'date': DESCENDING
+            }
+        },
+    ]
+
+def get_sort_by_published(): 
+    return [
+        {
+            "$match": {
+                "extract": { "$exists": True }
+            }
+        },
+        {
+            "$match": {
+                "extract.date": {
+                    "$not": {
+                        "$size": 0
+                    }
+                }
+            }
+        },
+        {
+            "$addFields": {
+                "dConfidence": {
+                    "$toDecimal": "$extract.dateConfidence"
+                }
+            }
+        },
+        {
+            "$match": {
+                "dConfidence": {
+                    "$gte": 0.04
+                }
+            }
+        },
+        {'$sort': {'extract.date"': DESCENDING}}
+    ]
 
 def get_url_counts():
     return list(db.urls.aggregate([  			
@@ -245,7 +340,7 @@ def get_url_counts_by_date():
         {
             "$match": {
                 "_id": {
-                    "$lte": datetime.datetime.utcnow()
+                    "$lte": datetime.utcnow()
                 }
             }
         },
@@ -270,37 +365,6 @@ def get_urls_with_date():
         "count": { "$sum": 1 }
     }
   }]))
-
-def get_urls_with_keyword(query):
-    return list(db.urls.aggregate([
-        {
-            "$match": {
-                "keywords.0": {
-                    "$exists": True
-                },
-                "keywords": {
-                    "$elemMatch": {
-                        "0": {
-                            "$regex": query,
-                            "$options": "i"
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "$project": {
-                "_id": {"$toString": "$_id"},
-                "url": 1,
-                "date": 1,
-                "extract.title": 1,
-                "extract.headline": 1,
-                "summary": 1,
-            }
-        },
-        {'$limit': 50}
-    ]))
-
 
 def get_stats():
     results = {}

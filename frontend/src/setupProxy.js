@@ -11,7 +11,7 @@ module.exports = function(app) {
   app.use(
     '/admin',
     createProxyMiddleware({
-      target: 'http://localhost:5555',
+      target: 'http://localhost:5555/admin/',
       changeOrigin: true,
     })
   );

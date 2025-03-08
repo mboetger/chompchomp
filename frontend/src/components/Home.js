@@ -1,8 +1,10 @@
 import React from 'react';
 import Stack from 'react-bootstrap/Stack';
 import Histogram from './Histogram';
+import { HomeProvider } from '../contexts/HomeContext';
 import Urls from './Urls';
 import Breadcrumb from 'react-bootstrap/Breadcrumb';
+import Search from './Search';
 
 const Home = () => {
     return (
@@ -13,9 +15,12 @@ const Home = () => {
                 </Breadcrumb.Item>
                 <Breadcrumb.Item active>Tech</Breadcrumb.Item>
             </Breadcrumb>
-            <Histogram />
-            <br />
-            <Urls />
+            <HomeProvider>                
+                <Histogram />
+                <br />
+                <Search />
+                <Urls />
+            </HomeProvider>
         </Stack>        
     );
 };
