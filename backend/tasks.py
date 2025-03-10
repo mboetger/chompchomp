@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from celery import Celery, group, subtask
+from celery.exceptions import Reject
 from extractnet import Extractor
 
 from textblob import TextBlob
@@ -23,7 +24,7 @@ import webtech
 import whois
 import yake
 
-from data import validate_url, get_url_by_url, get_aggregators, save_url, save_extraction, save_sentiment, save_keywords, save_scan, save_whois, save_summary
+from data import should_scrape, validate_url, get_url_by_url, get_aggregators, save_url, save_extraction, save_sentiment, save_keywords, save_scan, save_whois, save_summary
 
 SUMMARY_LANGUAGE = "english"
 SUMMARY_SENTENCES_COUNT = 5
@@ -56,7 +57,6 @@ kw_model = yake.KeywordExtractor(top=10, stopwords=None)  # Set up YAKE keyword 
 def get_options(): # Get Chrome options for headless browsing
     options = Options()
     options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     # adding argument to disable the AutomationControlled flag 
     options.add_argument("--disable-blink-features=AutomationControlled") 
@@ -83,34 +83,37 @@ def setup_driver():
 # Define a Celery task to scrape a webpage and return its source
 @app.task(default_retry_delay=10, max_retries=3, soft_time_limit=30, time_limit=100)
 def scrape(url):
-    results = {}
-    driver = setup_driver()
-    try:        
-        driver.get(url)
-        page_source = driver.page_source
-        if page_source:
-            results[url] = page_source
-            save_url(url)            
-    finally:
-        driver.close()
-    del driver
+    results = {}   
+    if not should_scrape(url):
+        raise Reject("Recently scraped.")
+        
+    with setup_driver() as driver:
+        try:                
+            driver.get(url)
+            page_source = driver.page_source
+            if page_source:
+                results[url] = page_source
+                save_url(url)            
+        finally:
+            driver.close()
+            driver.quit()                    
     return results
 
 # Define a Celery task to get links from a webpage using a specified XPath
 @app.task(default_retry_delay=4, max_retries=2, soft_time_limit=10, time_limit=30)
 def get_links(target_xpath):
     target, xpath = target_xpath
-    urls = set()
-    driver = setup_driver()
-    try:    
-        driver.get(target)
-        elements = driver.find_elements(By.XPATH, xpath)            
-        for element in elements:           
-            url = element.get_attribute("href")
-            urls.add(url)
-    finally:
-        driver.close()
-    del driver
+    urls = set()    
+    with setup_driver() as driver:
+        try:            
+            driver.get(target)
+            elements = driver.find_elements(By.XPATH, xpath)            
+            for element in elements:           
+                url = element.get_attribute("href")
+                urls.add(url)
+        finally:
+            driver.close()
+            driver.quit()    
     return list(urls)
 
 def date_to_string(date):
@@ -140,7 +143,6 @@ def sentiment(extracted_data):
     for url, content in extracted_data.items():                
         sentiment = TextBlob(content).sentiment    
         save_sentiment(url, sentiment)        
-
         results[url] = True
     return results
 
@@ -216,7 +218,7 @@ def workflow():
                 summarize.s(),                       
             ),
             scan.s(),
-            #ask_whois.s(),
+            ask_whois.s(),
         )
     )
     aggregators = get_aggregators()    
@@ -251,7 +253,7 @@ def wayback():
                 summarize.s(),                       
             ),
             scan.s(),
-            #ask_whois.s(),
+            ask_whois.s(),
         )
     )
     aggregators = get_aggregators()    

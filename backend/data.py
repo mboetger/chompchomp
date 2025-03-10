@@ -48,6 +48,8 @@ def get_key(prefix, url):
         hash_url = hashlib.md5(url.encode()).hexdigest()
         return prefix + ":" + hash_url
 
+def should_scrape(url):
+    return not db.urls.find_one({'url': url, 'date': { "$gte": datetime.today() - timedelta(days=1) }})
 
 def save_url(url: str):
     db.urls.update_one({'url': url}, 
@@ -118,7 +120,11 @@ def save_scan(url, report):
 
 
 def save_whois(domain, whois_info):
-    print('unsupported')
+    db.domains.update_one(
+        {'domain': domain},
+        {'$set': {'whois': whois_info}},
+        upsert=True
+    )
 
 
 def save_summary(url, summary):
@@ -178,13 +184,14 @@ def get_url_list():
                 "date": 1,
                 "extract.title": 1,
                 "extract.headline": 1,
+                "extract.date": 1,
                 "summary": 1,
             }
         },
         {'$limit': 50}
     ]
 
-def get_urls(date:str =None, query:str =None, sort_by: OrderBy = OrderBy.scanned):
+def get_urls(date:str =None, query:str =None, sort_by: OrderBy = OrderBy.published):
     pipeline = []
     
     if date:

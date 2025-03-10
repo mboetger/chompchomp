@@ -44,7 +44,7 @@ async def url_counts(sort_by: OrderBy = OrderBy.published):
         return get_url_counts()
 
 @app.get("/urls")
-async def url_list(query: str = None, date: str = None, sort_by: OrderBy = OrderBy.scanned):   
+async def url_list(query: str = None, date: str = None, sort_by: OrderBy = OrderBy.published):   
     if query:
         query = unquote(query)
     if date:
