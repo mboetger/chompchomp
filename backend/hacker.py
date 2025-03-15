@@ -64,8 +64,8 @@ def main(targets=targets):
                         sentiment.s(),  
                         summarize.s(),                       
                     ),
-                    scan.s(),
-                    #ask_whois.s(),
+                    scan.s(),                    
+                    ask_whois.s(),                        
                 )).delay().forget()
     
 if __name__ == "__main__":

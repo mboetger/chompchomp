@@ -23,8 +23,7 @@ function App() {
                         <Route path="/urls" element={<GetUrl />} />                                                    
                         <Route path="/workflows" element={<Workflows />} />                     
                         <Route path='/aggregators' element={<Aggregators />} />                    
-                        <Route path="/url/:id" element={<Url />} />        
-
+                        <Route path="/url/:id" element={<Url />} />                            
                     </Routes>                                    
                 </Router>  
             </Container>                           

@@ -56,6 +56,7 @@ kw_model = yake.KeywordExtractor(top=10, stopwords=None)  # Set up YAKE keyword 
 
 def get_options(): # Get Chrome options for headless browsing
     options = Options()
+    options.add_argument('--no-sandbox')
     options.add_argument('--headless')
     options.add_argument('--disable-dev-shm-usage')
     # adding argument to disable the AutomationControlled flag 
@@ -88,7 +89,7 @@ def scrape(url):
         raise Reject("Recently scraped.")
         
     with setup_driver() as driver:
-        try:                
+        try:                  
             driver.get(url)
             page_source = driver.page_source
             if page_source:
@@ -217,8 +218,8 @@ def workflow():
                 sentiment.s(),  
                 summarize.s(),                       
             ),
-            scan.s(),
-            ask_whois.s(),
+            scan.s(),            
+            ask_whois.s(),                            
         )
     )
     aggregators = get_aggregators()    

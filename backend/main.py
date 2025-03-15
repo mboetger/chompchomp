@@ -2,7 +2,7 @@
 from celery import group
 from fastapi import FastAPI
 
-from data import Url, Aggregator, OrderBy, get_url_counts_by_date, get_url_counts, get_stats, get_urls, get_key, get_aggregator, get_aggregators, save_aggregator, save_draft_aggregator, validate_aggregator, validate_url_item, validate_url_id, get_url_data
+from data import Url, Aggregator, OrderBy, get_domain, get_url_counts_by_date, get_url_counts, get_stats, get_urls, get_key, get_aggregator, get_aggregators, save_aggregator, save_draft_aggregator, validate_aggregator, validate_url_item, validate_url_id, get_url_data
 from tasks import wayback, workflow, get_links, scrape, extract, keywords, sentiment, summarize, scan
 from urllib.parse import unquote
 
@@ -13,6 +13,10 @@ async def read_item(item_id: str, url_id: str):
     id = unquote(item_id)
     url = unquote(url_id)
     return get_url_data(url)
+
+@app.get("/domain")
+async def read_domain(domain: str):
+    return get_domain(domain)
 
 @app.get("/url/{item_id}")
 async def read_item(item_id: str):

@@ -124,8 +124,7 @@ def save_scan(url, report):
 
 def save_whois(domain, whois_info):
     db.domains.update_one(
-        {'domain': domain},
-        {'date': datetime.today()},
+        {'domain': domain},    
         {'$set': {'whois': whois_info}},
         upsert=True
     )
@@ -438,3 +437,19 @@ def save_aggregator(url, xpath):
         upsert=True
     )
     return {'Message': 'aggregator saved'}
+
+def get_domain(domain: str):    
+    results = list(db.domains.aggregate([
+        {"$match": {
+            "domain": domain,
+        }},
+        {'$project': {
+            "_id": {"$toString": "$_id"},
+            "domain": 1,
+            "date": 1,
+            "whois": 1,
+        }},
+        {'$sort': {'date': DESCENDING}},
+        {'$limit': 1}
+    ]))
+    return results[0] if results else None

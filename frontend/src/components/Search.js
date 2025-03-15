@@ -5,7 +5,7 @@ import { HomeContext} from '../contexts/HomeContext';
 
 
 const Search = () => {    
-    const { setSearchQuery} = useContext(HomeContext);  
+    const { searchQuery, setSearchQuery} = useContext(HomeContext);  
 
     const handleInputChange = (event) => {          
         const query = event.target.value
@@ -17,6 +17,7 @@ const Search = () => {
             <Form.Control
                 type="search"
                 id="inputSearch"
+                defaultValue={`${searchQuery}`}
                 aria-describedby="searchHelpBlock"
                 onKeyUp={handleInputChange}                
             />
