@@ -48,6 +48,9 @@ def get_key(prefix, url):
         hash_url = hashlib.md5(url.encode()).hexdigest()
         return prefix + ":" + hash_url
 
+def should_ask_whois(domain):
+    return not db.domains.find_one({'domain': domain, 'date': { "$gte": datetime.today() - timedelta(days=1) }})
+
 def should_scrape(url):
     return not db.urls.find_one({'url': url, 'date': { "$gte": datetime.today() - timedelta(days=1) }})
 
@@ -122,6 +125,7 @@ def save_scan(url, report):
 def save_whois(domain, whois_info):
     db.domains.update_one(
         {'domain': domain},
+        {'date': datetime.today()},
         {'$set': {'whois': whois_info}},
         upsert=True
     )
@@ -187,8 +191,7 @@ def get_url_list():
                 "extract.date": 1,
                 "summary": 1,
             }
-        },
-        {'$limit': 50}
+        },        
     ]
 
 def get_urls(date:str =None, query:str =None, sort_by: OrderBy = OrderBy.published):
@@ -216,29 +219,28 @@ def get_urls(date:str =None, query:str =None, sort_by: OrderBy = OrderBy.publish
             })
     
     if query:
+        keywords = query.split(' ')
         pipeline.append({
             "$match": {
                 "keywords.0": {
                     "$exists": True
                 },
-                "keywords": {
-                    "$elemMatch": {
-                        "0": {
-                            "$regex": query,
-                            "$options": "i"
-                        }
-                    }
-                }
+                "$or": [
+                    {"keywords": {"$elemMatch": {"0": {"$regex": word, "$options": "i"}}}} for word in keywords
+                ]                
             }
         })
     
+    
+    pipeline += get_url_list()
+
     if sort_by == OrderBy.published:
         pipeline += get_sort_by_published()
     else:
         pipeline += get_sort_by_scanned()
-    
-    pipeline += get_url_list()
-    
+
+    pipeline += [{'$limit': 50}]
+
     return list(db.urls.aggregate(pipeline))
 
 def get_sort_by_scanned():
@@ -256,36 +258,20 @@ def get_sort_by_scanned():
     ]
 
 def get_sort_by_published(): 
-    return [
+    return [        
         {
             "$match": {
-                "extract": { "$exists": True }
+                "extract.date": { "$exists": True }
             }
-        },
+        },        
         {
             "$match": {
                 "extract.date": {
-                    "$not": {
-                        "$size": 0
-                    }
+                    "$lte": datetime.utcnow(),
                 }
             }
-        },
-        {
-            "$addFields": {
-                "dConfidence": {
-                    "$toDecimal": "$extract.dateConfidence"
-                }
-            }
-        },
-        {
-            "$match": {
-                "dConfidence": {
-                    "$gte": 0.04
-                }
-            }
-        },
-        {'$sort': {'extract.date"': DESCENDING}}
+        },        
+        {'$sort': {'extract.date': -1}},            
     ]
 
 def get_url_counts():

@@ -7,7 +7,7 @@ import { HomeContext} from '../contexts/HomeContext';
 const Search = () => {    
     const { setSearchQuery} = useContext(HomeContext);  
 
-    const handleInputChange = (event) => {    
+    const handleInputChange = (event) => {          
         const query = event.target.value
         setSearchQuery(query);        
     };
@@ -18,7 +18,7 @@ const Search = () => {
                 type="search"
                 id="inputSearch"
                 aria-describedby="searchHelpBlock"
-                onChange={handleInputChange}
+                onKeyUp={handleInputChange}                
             />
             <Form.Text id="searchHelpBlock" muted>
                 Search your dataset.
